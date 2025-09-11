@@ -61,40 +61,42 @@ j2l = 80
 j3l = 62
 
 
-def inv_kin(z_input, y_input ):
+def inv_kin(x_input, y_input, z_input):
+    v1 = np.arctan2(x_input, y_input) + np.deg2rad(180)
+    h = np.sqrt((y_input * y_input) + (x_input * x_input))
+    l = np.sqrt((h * h) + (z_input * z_input))
 
     #inverse cal
-    l = np.sqrt(y_input**2 + z_input**2)
+    # l = np.sqrt(y_input**2 + z_input**2)
     
     v3 = np.arccos((j2l**2 + j3l**2 - l**2) / (2 * j2l * j3l))
     v3 = v3 + np.deg2rad(90)
     
     vb = np.arccos((j2l**2 + l**2 - j3l**2) / (2 * j2l * l))
-    va = np.arctan2(z_input, y_input)
+    va = np.arctan2(z_input, h)
     v2 = va + vb + np.deg2rad(180)
 
-    
-    
-
+    v1deg = np.rad2deg(v1)
     v2deg = np.rad2deg(v2)
     v3deg = np.rad2deg(v3)
 
-    return v2deg, v3deg
+    return v1deg, v2deg, v3deg
 
 #convert position to dynamixel
-def legPosition (z_goal, y_goal):
+def legPosition (x_goal, y_goal, z_goal):
         y_rest = 80
         z_rest = -62
 
         y_goal_total = y_rest - y_goal
         z_goal_total = z_rest - z_goal
 
-        v2deg, v3deg = inv_kin(z_goal_total, y_goal_total)
+        v1deg, v2deg, v3deg = inv_kin(x_goal, y_goal_total, z_goal_total )
 
-        pos1 = degree_to_position(v2deg)
-        pos2 = degree_to_position(v3deg)
+        pos1 = degree_to_position(v1deg)
+        pos2 = degree_to_position(v2deg)
+        pos3 = degree_to_position(v3deg)
 
-        return pos1, pos2, v2deg, v3deg
+        return pos1, pos2, pos3, v1deg, v2deg, v3deg
 
 # Control table address
 ADDR_MX_TORQUE_ENABLE      = 24               # Control table address is different in Dynamixel model
@@ -109,8 +111,10 @@ LEN_MX_PRESENT_POSITION    = 4
 PROTOCOL_VERSION            = 1.0               # See which protocol version is used in the Dynamixel
 
 # Default setting
-DXL1_ID                     = 2
-DXL2_ID                     = 3                 
+DXL1_ID                     = 1
+DXL2_ID                     = 2
+DXL3_ID                     = 3
+
 BAUDRATE                    = 1000000             
 DEVICENAME                  = '/dev/ttyUSB0'    # Check which port is being used on your controller
                                                 
@@ -194,15 +198,15 @@ try:
 
         # Konversi ke posisi Dynamixel
 
-        userInput = input(f"\n Masukkan posisi z & y : ")
+        userInput = input(f"\n Masukkan posisi x, y & z : ")
         try:
-            val1, val2 = map(int, userInput.split())
+            val1, val2, val3 = map(int, userInput.split())
         except:
-            print("⚠️ Format salah! Contoh input: 90 180")
+            print("⚠️ Format salah! Contoh input: 10 20 10")
             continue
 
 
-        pos1, pos2, v2deg, v3deg= legPosition(val1, val2)
+        pos1, pos2, pos3, v1deg, v2deg, v3deg= legPosition(val1, val2, val3)
 
         # Buat param untuk servo 1
         param_goal_position1 = [
@@ -220,9 +224,19 @@ try:
             DXL_HIBYTE(DXL_HIWORD(pos2))
         ]
 
+        # Buat param untuk servo 3
+        param_goal_position3 = [
+            DXL_LOBYTE(DXL_LOWORD(pos3)),
+            DXL_HIBYTE(DXL_LOWORD(pos3)),
+            DXL_LOBYTE(DXL_HIWORD(pos3)),
+            DXL_HIBYTE(DXL_HIWORD(pos3))
+        ]
+
         # Tambahkan ke sync write
         groupSyncWrite.addParam(DXL1_ID, param_goal_position1)
         groupSyncWrite.addParam(DXL2_ID, param_goal_position2)
+        groupSyncWrite.addParam(DXL3_ID, param_goal_position3)
+
 
         # Kirim perintah
         dxl_comm_result = groupSyncWrite.txPacket()
@@ -232,7 +246,7 @@ try:
         # Bersihkan parameter
         groupSyncWrite.clearParam()
 
-        print(f"➡️ Servo {DXL1_ID} ke {v2deg}° (pos:{pos1}), Servo {DXL2_ID} ke {v3deg}° (pos:{pos2})")
+        print(f"➡️ Servo {DXL1_ID} ke {v1deg}° (pos:{pos1}), Servo {DXL2_ID} ke {v2deg}° (pos:{pos2}), Servo {DXL3_ID} ke {v3deg}° (pos:{pos3})")
 
 except KeyboardInterrupt:
     print("\n🛑 Program dihentikan oleh user")
