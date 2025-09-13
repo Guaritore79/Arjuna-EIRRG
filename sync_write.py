@@ -50,7 +50,7 @@ else:
 from dynamixel_sdk import *                    # Uses Dynamixel SDK library
 
 def mapping(x, in_min, in_max, out_min,  out_max):
-  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
 
 # Konversi derajat ke posisi AX-12
@@ -111,9 +111,9 @@ LEN_MX_PRESENT_POSITION    = 4
 PROTOCOL_VERSION            = 1.0               # See which protocol version is used in the Dynamixel
 
 # Default setting
-DXL1_ID                     = 1
-DXL2_ID                     = 2
-DXL3_ID                     = 3
+# DXL1_ID                     = 1
+# DXL2_ID                     = 2
+# DXL3_ID                     = 3
 
 BAUDRATE                    = 1000000             
 DEVICENAME                  = '/dev/ttyUSB0'    # Check which port is being used on your controller
@@ -162,25 +162,35 @@ else:
     quit()
 
 
-# Enable Dynamixel#1 Torque
-dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, DXL1_ID, ADDR_MX_TORQUE_ENABLE, TORQUE_ENABLE)
-if dxl_comm_result != COMM_SUCCESS:
-    print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-elif dxl_error != 0:
-    print("%s" % packetHandler.getRxPacketError(dxl_error))
-else:
-    print("Dynamixel#%d has been successfully connected" % DXL1_ID)
+# # Enable Dynamixel#1 Torque
+# dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, DXL1_ID, ADDR_MX_TORQUE_ENABLE, TORQUE_ENABLE)
+# if dxl_comm_result != COMM_SUCCESS:
+#     print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+# elif dxl_error != 0:
+#     print("%s" % packetHandler.getRxPacketError(dxl_error))
+# else:
+#     print("Dynamixel#%d has been successfully connected" % DXL1_ID)
 
-# Enable Dynamixel#2 Torque
-dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, DXL2_ID, ADDR_MX_TORQUE_ENABLE, TORQUE_ENABLE)
-if dxl_comm_result != COMM_SUCCESS:
-    print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-elif dxl_error != 0:
-    print("%s" % packetHandler.getRxPacketError(dxl_error))
-else:
-    print("Dynamixel#%d has been successfully connected" % DXL2_ID)
+# # Enable Dynamixel#2 Torque
+# dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, DXL2_ID, ADDR_MX_TORQUE_ENABLE, TORQUE_ENABLE)
+# if dxl_comm_result != COMM_SUCCESS:
+#     print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+# elif dxl_error != 0:
+#     print("%s" % packetHandler.getRxPacketError(dxl_error))
+# else:
+#     print("Dynamixel#%d has been successfully connected" % DXL2_ID)
 
-    print(f"✅ Servo {DXL2_ID} torque enabled")
+#     print(f"✅ Servo {DXL2_ID} torque enabled")
+
+# Enable All Dynamixel Torque
+for i in range (1, 19):
+    dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, i, ADDR_MX_TORQUE_ENABLE, TORQUE_ENABLE)
+    if dxl_comm_result != COMM_SUCCESS:
+        print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+    elif dxl_error != 0:
+        print("%s" % packetHandler.getRxPacketError(dxl_error))
+    else:
+        print("Dynamixel#%d has been successfully connected" % i)
 
 # -----------------------------
 # Loop utama: Input derajat
@@ -233,9 +243,25 @@ try:
         ]
 
         # Tambahkan ke sync write
-        groupSyncWrite.addParam(DXL1_ID, param_goal_position1)
-        groupSyncWrite.addParam(DXL2_ID, param_goal_position2)
-        groupSyncWrite.addParam(DXL3_ID, param_goal_position3)
+        # groupSyncWrite.addParam(DXL1_ID, param_goal_position1)
+        # groupSyncWrite.addParam(DXL2_ID, param_goal_position2)
+        # groupSyncWrite.addParam(DXL3_ID, param_goal_position3)
+
+        #Add to sync write with loop
+
+        #Top
+        for i in range(1, 18, 3):
+            groupSyncWrite.addParam(i, param_goal_position1)
+
+        #Middle
+        for j in range (2, 18, 3):
+            groupSyncWrite.addParam(j, param_goal_position2)
+        
+        #Bottom
+        for k in range(3, 19, 3):
+            groupSyncWrite.addParam(k, param_goal_position3)
+
+
 
 
         # Kirim perintah
@@ -245,28 +271,50 @@ try:
 
         # Bersihkan parameter
         groupSyncWrite.clearParam()
+        print("Upper servo")
+        for i in range(1, 18, 3):
+            print(f"➡️ Servo {i} ke {v1deg}° (pos:{pos1})")
+        print("Center servo") 
+        for j in range (2, 18, 3):
+            print(f"➡️ Servo {j} ke {v2deg}° (pos:{pos2})")
+        print("Lower servo")
+        for k in range(3, 19, 3):
+            print(f"➡️ Servo {k} ke {v3deg}° (pos:{pos3})")
+            
 
-        print(f"➡️ Servo {DXL1_ID} ke {v1deg}° (pos:{pos1}), Servo {DXL2_ID} ke {v2deg}° (pos:{pos2}), Servo {DXL3_ID} ke {v3deg}° (pos:{pos3})")
+        # print(f"➡️ Servo {DXL1_ID} ke {v1deg}° (pos:{pos1}), Servo {DXL2_ID} ke {v2deg}° (pos:{pos2}), Servo {DXL3_ID} ke {v3deg}° (pos:{pos3})")
 
 except KeyboardInterrupt:
     print("\n🛑 Program dihentikan oleh user")
 
 # Disable Dynamixel#1 Torque
-dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, DXL1_ID, ADDR_MX_TORQUE_ENABLE, TORQUE_DISABLE)
-if dxl_comm_result != COMM_SUCCESS:
-    print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-elif dxl_error != 0:
-    print("%s" % packetHandler.getRxPacketError(dxl_error))
+# dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, DXL1_ID, ADDR_MX_TORQUE_ENABLE, TORQUE_DISABLE)
+# if dxl_comm_result != COMM_SUCCESS:
+#     print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+# elif dxl_error != 0:
+#     print("%s" % packetHandler.getRxPacketError(dxl_error))
 
-# Disable Dynamixel#2 Torque
-dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, DXL2_ID, ADDR_MX_TORQUE_ENABLE, TORQUE_DISABLE)
-if dxl_comm_result != COMM_SUCCESS:
-    print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-elif dxl_error != 0:
-    print("%s" % packetHandler.getRxPacketError(dxl_error))
+# # Disable Dynamixel#2 Torque
+# dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, DXL2_ID, ADDR_MX_TORQUE_ENABLE, TORQUE_DISABLE)
+# if dxl_comm_result != COMM_SUCCESS:
+#     print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+# elif dxl_error != 0:
+#     print("%s" % packetHandler.getRxPacketError(dxl_error))
 
-packetHandler.write1ByteTxRx(portHandler, DXL1_ID, ADDR_MX_TORQUE_ENABLE, TORQUE_DISABLE)
-packetHandler.write1ByteTxRx(portHandler, DXL2_ID, ADDR_MX_TORQUE_ENABLE, TORQUE_DISABLE)
+# packetHandler.write1ByteTxRx(portHandler, DXL1_ID, ADDR_MX_TORQUE_ENABLE, TORQUE_DISABLE)
+# packetHandler.write1ByteTxRx(portHandler, DXL2_ID, ADDR_MX_TORQUE_ENABLE, TORQUE_DISABLE)
+
+for i in range (1, 19):
+    # Disable All Dynamixel Torque
+    dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, i, ADDR_MX_TORQUE_ENABLE, TORQUE_DISABLE)
+    if dxl_comm_result != COMM_SUCCESS:
+        print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+    elif dxl_error != 0:
+        print("%s" % packetHandler.getRxPacketError(dxl_error))
+    
+    packetHandler.write1ByteTxRx(portHandler, i, ADDR_MX_TORQUE_ENABLE, TORQUE_DISABLE)
+
+
 
 # Close port
 portHandler.closePort()
