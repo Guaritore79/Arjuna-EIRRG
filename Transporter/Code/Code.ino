@@ -1,22 +1,22 @@
 #include <PS4Controller.h>
 
-int frontRight1 = 26;
-int frontRight2 = 27;
-int EnafrontRight = 14;
+int frontRight1 = 25;
+int frontRight2 = 33;
+int EnafrontRight = 32; // motor2
 
-int frontLeft1 = 21;
-int frontLeft2 = 22;
-int EnafrontLeft = 23;
+int frontLeft1 = 18;
+int frontLeft2 = 19;
+int EnafrontLeft = 5; //motor1
 
-int backRight1 = 25;
-int backRight2 = 33;
-int EnabackRight = 32;
+int backRight1 = 27;
+int backRight2 = 26;
+int EnabackRight = 14; //motor4
 
-int backLeft1 = 19;
-int backLeft2 = 18;
-int EnabackLeft = 5;
+int backLeft1 = 21 ;
+int backLeft2 = 22;
+int EnabackLeft = 23; //motor3
 
-int speed = 100;
+uint16_t vx, vy, vw;
 
 
 void setup() {
@@ -47,80 +47,78 @@ void setup() {
 }
 
 void loop() {
-  if (PS4.isConnected()) {
-    // Serial.println("Connected!");
+  // if (PS4.isConnected()) {
+  //   // Serial.println("Connected!");
+  // }
+
+  vx = map(control_drift(PS4.LStickX(), 12), -128, 127, -255, 255);
+  vy = -map(control_drift(PS4.LStickY(), 12), -128, 127, -255, 255);
+  vw = -map(control_drift(PS4.RStickX(), 12), -128, 127, -200, 200);
+
+  int16_t v1 = mecanum_kinematic(1, vx, vy, vw);
+  int16_t v2= mecanum_kinematic(2, vx, vy, vw);
+  int16_t v3 = mecanum_kinematic(3, vx, vy, vw);
+  int16_t v4 = mecanum_kinematic(4, vx, vy, vw);
+
+  setMotor(1, v1);
+  setMotor(2, v2);
+  setMotor(3, v3);
+  setMotor(4, v4);
+
+}
+
+void setMotor(uint8_t motor, int16_t speed){
+  uint8_t dirA = (speed >= 0);
+  uint8_t dirB = (speed < 0);
+
+  speed = abs(speed);
+
+  switch(motor){
+    case 1:
+        digitalWrite(frontLeft1, dirB);
+        digitalWrite(frontLeft2, dirA);
+        analogWrite(EnafrontLeft, speed);
+        Serial.println("motor1");
+        break;
+    case 2:
+        digitalWrite(frontRight1, dirB);
+        digitalWrite(frontRight2, dirA);
+        analogWrite(EnafrontRight, speed);
+        Serial.println("motor2");
+        break;
+    case 3:
+        digitalWrite(backLeft1, dirB);
+        digitalWrite(backLeft2, dirA);
+        analogWrite(EnabackLeft, speed);
+        Serial.println("motor3");
+        break;
+    case 4:
+        digitalWrite(backRight1, dirB);
+        digitalWrite(backRight2, dirA);
+        analogWrite(EnabackRight, speed);
+        Serial.println("motor4");
+        break;
+    default:
+        break;
   }
+}
 
-  if (PS4.Triangle() == 1){
-    digitalWrite(frontRight1, HIGH);
-    digitalWrite(frontRight2, LOW);
-    analogWrite(EnafrontRight, speed);
+int16_t mecanum_kinematic(uint8_t motor, int16_t vx, int16_t vy, int16_t vw){
+  switch(motor){
+    case 1: return vx + vy + vw;
+    case 2: return vx - vy + vw;    
+    case 3: return vx - vy - vw;
+    case 4: return vx + vy - vw;
+    default : return 0;
+  }
+}
 
-    // Motor Depan Kiri maju
-    digitalWrite(frontLeft1, HIGH);
-    digitalWrite(frontLeft2, LOW);
-    analogWrite(EnafrontLeft, speed);
-
-    // Motor Belakang Kanan maju
-    digitalWrite(backRight1, HIGH);
-    digitalWrite(backRight2, LOW);
-    analogWrite(EnabackRight, speed);
-
-    // Motor Belakang Kiri maju
-    digitalWrite(backLeft1, HIGH);
-    digitalWrite(backLeft2, LOW);
-    analogWrite(EnabackLeft, speed);
-
-    Serial.println("Maju");
-
+int16_t control_drift(int16_t value, int16_t limit){
+  if (abs(value) < limit){
+    return 0;
+  }else if(value > 0){
+    return value - limit;
   }else{
-    diam();
+    return value + limit;
   }
-
-  delay(25);
-
 }
-
-// void movingForward(){
-  // digitalWrite(frontRight1, HIGH);
-  // digitalWrite(frontRight2, LOW);
-  // analogWrite(EnafrontRight, speed);
-
-  // // Motor Depan Kiri maju
-  // digitalWrite(frontLeft1, HIGH);
-  // digitalWrite(frontLeft2, LOW);
-  // analogWrite(EnafrontLeft, speed);
-  
-  // // Motor Belakang Kanan maju
-  // digitalWrite(backRight1, HIGH);
-  // digitalWrite(backRight2, LOW);
-  // analogWrite(EnabackRight, speed);
-  
-  // // Motor Belakang Kiri maju
-  // digitalWrite(backLeft1, HIGH);
-  // digitalWrite(backLeft2, LOW);
-  // analogWrite(EnabackLeft, speed);
-// }
-
-void diam(){
-  digitalWrite(frontRight1, LOW);
-  digitalWrite(frontRight2, LOW);
-  analogWrite(EnafrontRight, 0);
-
-  // Motor Depan Kiri maju
-  digitalWrite(frontLeft1, LOW);
-  digitalWrite(frontLeft2, LOW);
-  analogWrite(EnafrontLeft, 0);
-  
-  // Motor Belakang Kanan maju
-  digitalWrite(backRight1, LOW);
-  digitalWrite(backRight2, LOW);
-  analogWrite(EnabackRight, 0);
-  
-  // Motor Belakang Kiri maju
-  digitalWrite(backLeft1, LOW);
-  digitalWrite(backLeft2, LOW);
-  analogWrite(EnabackLeft, 0);
-}
-
- 
