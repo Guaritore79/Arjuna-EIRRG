@@ -18,6 +18,9 @@ int EnabackLeft = 23; //motor3
 
 uint16_t vx, vy, vw;
 
+unsigned long previousDebugTime = 0;
+const long debugInterval = 500;
+
 
 void setup() {
   Serial.begin(115200);
@@ -53,7 +56,7 @@ void loop() {
 
   vx = map(control_drift(PS4.LStickX(), 12), -128, 127, -255, 255);
   vy = -map(control_drift(PS4.LStickY(), 12), -128, 127, -255, 255);
-  vw = -map(control_drift(PS4.RStickX(), 12), -128, 127, -200, 200);
+  vw = -map(control_drift(PS4.RStickX(), 12), -128, 127, -255, 255);
 
   int16_t v1 = mecanum_kinematic(1, vx, vy, vw);
   int16_t v2= mecanum_kinematic(2, vx, vy, vw);
@@ -73,30 +76,40 @@ void setMotor(uint8_t motor, int16_t speed){
 
   speed = abs(speed);
 
+  // unsigned long currentTime = millis();
+  // if (currentTime - previousDebugTime >= debugInterval) {
+  //   previousDebugTime = currentTime;
+    
+  //   Serial.print("Motor ");
+  //   Serial.print(motor);
+  //   Serial.print(": PWM = ");
+  //   Serial.print(speed);
+  //   Serial.print(", DirA = ");
+  //   Serial.print(dirA);
+  //   Serial.print(", DirB = ");
+  //   Serial.println(dirB);
+  // }
+
   switch(motor){
     case 1:
         digitalWrite(frontLeft1, dirB);
         digitalWrite(frontLeft2, dirA);
         analogWrite(EnafrontLeft, speed);
-        Serial.println("motor1");
         break;
     case 2:
-        digitalWrite(frontRight1, dirB);
+        digitalWrite(frontRight1, dirB); 
         digitalWrite(frontRight2, dirA);
         analogWrite(EnafrontRight, speed);
-        Serial.println("motor2");
         break;
     case 3:
         digitalWrite(backLeft1, dirB);
         digitalWrite(backLeft2, dirA);
         analogWrite(EnabackLeft, speed);
-        Serial.println("motor3");
         break;
     case 4:
         digitalWrite(backRight1, dirB);
         digitalWrite(backRight2, dirA);
         analogWrite(EnabackRight, speed);
-        Serial.println("motor4");
         break;
     default:
         break;
@@ -105,10 +118,10 @@ void setMotor(uint8_t motor, int16_t speed){
 
 int16_t mecanum_kinematic(uint8_t motor, int16_t vx, int16_t vy, int16_t vw){
   switch(motor){
-    case 1: return vx + vy + vw;
-    case 2: return vx - vy + vw;    
-    case 3: return vx - vy - vw;
-    case 4: return vx + vy - vw;
+    case 1: return -vx + vy + vw;
+    case 2: return -vx - vy + vw;    
+    case 3: return -vx - vy - vw;
+    case 4: return -vx + vy - vw;
     default : return 0;
   }
 }
