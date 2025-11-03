@@ -1,8 +1,8 @@
 #include <PS4Controller.h>
-// #include <ESP32Servo.h>
+#include <ESP32Servo.h>
 
-// Servo gripServo;
-// int servoPos = 0;
+Servo gripServo;
+int servoPos = 0;
 
 int frontRight1 = 25;
 int frontRight2 = 33;
@@ -80,32 +80,37 @@ void notify()
     return; // keluar supaya joystick tidak override
   }
 
-int rawX = PS4.LStickX();
-int rawY = PS4.LStickY();
-int rawW = PS4.RStickX();
+  int rawX = PS4.LStickX();
+  int rawY = PS4.LStickY();
+  int rawW = PS4.RStickX();
 
-const int DEADZONE = 10;   // toleransi stick diam
-const int LIMIT = 90;      // batas maksimum
+  const int DEADZONE = 10;   // toleransi stick diam
+  const int LIMIT = 90;      // batas maksimum
 
-// --- Terapkan deadzone ---
-if (abs(rawX) < DEADZONE) rawX = 0;
-if (abs(rawY) < DEADZONE) rawY = 0;
-if (abs(rawW) < DEADZONE) rawW = 0;
+  // --- Terapkan deadzone ---
+  if (abs(rawX) < DEADZONE) rawX = 0;
+  if (abs(rawY) < DEADZONE) rawY = 0;
+  if (abs(rawW) < DEADZONE) rawW = 0;
 
-// --- Batasi range agar tidak lebih dari ±80 ---
-rawX = constrain(rawX, -LIMIT, LIMIT);
-rawY = constrain(rawY, -LIMIT, LIMIT);
-rawW = constrain(rawW, -LIMIT, LIMIT);
+  // --- Batasi range agar tidak lebih dari ±80 ---
+  rawX = constrain(rawX, -LIMIT, LIMIT);
+  rawY = constrain(rawY, -LIMIT, LIMIT);
+  rawW = constrain(rawW, -LIMIT, LIMIT);
 
-// --- Mapping ke kecepatan/pwm ---
-int vx = map(rawX, -LIMIT, LIMIT, -255, 255);
-int vy = -map(rawY, -LIMIT, LIMIT, -255, 255);
-int vw = -map(rawW, -LIMIT, LIMIT, -145, 145);
+  // --- Mapping ke kecepatan/pwm ---
+  int vx = map(rawX, -LIMIT, LIMIT, -255, 255);
+  int vy = -map(rawY, -LIMIT, LIMIT, -255, 255);
+  int vw = -map(rawW, -LIMIT, LIMIT, -145, 145);
 
   int16_t v1 = mecanum_kinematic(1, vx, vy, vw);
   int16_t v2= mecanum_kinematic(2, vx, vy, vw);
   int16_t v3 = mecanum_kinematic(3, vx, vy, vw);
   int16_t v4 = mecanum_kinematic(4, vx, vy, vw);
+
+v1 = constrain(v1, -255, 255);
+v2 = constrain(v2, -255, 255);
+v3 = constrain(v3, -255, 255);
+v4 = constrain(v4, -255, 255);
 
   setMotor(1, v1);
   setMotor(2, v2);
@@ -124,6 +129,37 @@ int vw = -map(rawW, -LIMIT, LIMIT, -145, 145);
     // servoPos = constrain(servoPos, 0, 180);
     // gripServo.write(servoPos);
     // delay(15); // biar gerak halus
+
+  static unsigned long lastServoTime = 0;
+  const unsigned long servoInterval = 100;
+  static bool servoInitialized = false;
+
+  // Inisialisasi servo position hanya sekali
+  if (!servoInitialized) {
+    servoPos = 0;
+    gripServo.write(servoPos);
+    servoInitialized = true;
+  }
+  
+  if(millis() - lastServoTime >= servoInterval){
+
+    bool up= PS4.Up();
+    bool down= PS4.Down();
+
+    if( up && !down && servoPos < 180){
+      servoPos +=5;
+    }
+
+    if(down && !up && servoPos > 0){
+      servoPos -=5;
+    }
+    gripServo.write(servoPos);
+    lastServoTime = millis();
+
+  }
+
+  
+  Serial.print("Grip : "); Serial.println(servoPos);
 
   if (PS4.R1()) {
     // L1 ditekan → lifter naik
@@ -153,7 +189,8 @@ void setup()
   PS4.attach(notify);
   PS4.begin("6c:c8:40:8b:85:c2");
 
-  // gripServo.attach(12, 500, 2400); 
+  gripServo.attach(12, 500, 2400); 
+  gripServo.write(0);
 
   pinMode(frontRight1, OUTPUT);  
   pinMode(frontRight2, OUTPUT);
