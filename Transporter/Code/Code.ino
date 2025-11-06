@@ -24,6 +24,8 @@ int lifter1 = 16;
 int lifter2 = 17;
 int enaLifter = 4; //motor lifter
 
+int maxPWM = 240;
+
 const int freq = 400;
 const int resolution = 8;
 
@@ -41,43 +43,6 @@ void notify()
   if (!PS4.isConnected()) {
     stopAllMotors();
     return;
-  }
-
-  // --- Gerak geser manual via R2 & L2 ---
-  if (PS4.R2()) {  
-    // Geser kanan (vy = 0, vx = +150)
-    int vx = 255;
-    int vy = 0;
-    int vw = 0;
-
-    int16_t v1 = mecanum_kinematic(1, vx, vy, vw);
-    int16_t v2 = mecanum_kinematic(2, vx, vy, vw);
-    int16_t v3 = mecanum_kinematic(3, vx, vy, vw);
-    int16_t v4 = mecanum_kinematic(4, vx, vy, vw);
-
-    setMotor(1, v1);
-    setMotor(2, v2);
-    setMotor(3, v3);
-    setMotor(4, v4);
-    return; // keluar supaya joystick tidak override
-  }
-
-  if (PS4.L2()) {  
-    // Geser kiri (vy = 0, vx = -150)
-    int vx = -255;
-    int vy = 0;
-    int vw = 0;
-
-    int16_t v1 = mecanum_kinematic(1, vx, vy, vw);
-    int16_t v2 = mecanum_kinematic(2, vx, vy, vw);
-    int16_t v3 = mecanum_kinematic(3, vx, vy, vw);
-    int16_t v4 = mecanum_kinematic(4, vx, vy, vw);
-
-    setMotor(1, v1);
-    setMotor(2, v2);
-    setMotor(3, v3);
-    setMotor(4, v4);
-    return; // keluar supaya joystick tidak override
   }
 
   int rawX = PS4.LStickX();
@@ -100,35 +65,67 @@ void notify()
   // --- Mapping ke kecepatan/pwm ---
   int vx = map(rawX, -LIMIT, LIMIT, -255, 255);
   int vy = -map(rawY, -LIMIT, LIMIT, -255, 255);
-  int vw = -map(rawW, -LIMIT, LIMIT, -145, 145);
+  int vw = -map(rawW, -LIMIT, LIMIT, -130, 130);
 
   int16_t v1 = mecanum_kinematic(1, vx, vy, vw);
   int16_t v2= mecanum_kinematic(2, vx, vy, vw);
   int16_t v3 = mecanum_kinematic(3, vx, vy, vw);
   int16_t v4 = mecanum_kinematic(4, vx, vy, vw);
 
-v1 = constrain(v1, -255, 255);
-v2 = constrain(v2, -255, 255);
-v3 = constrain(v3, -255, 255);
-v4 = constrain(v4, -255, 255);
+  if(PS4.Triangle()) maxPWM = 240;
+  if(PS4.Circle()) maxPWM = 225;
+
+
+  v1 = constrain(v1, (-maxPWM - 15), (maxPWM + 15));
+  v2 = constrain(v2, (-maxPWM - 15), (maxPWM + 15));
+  v3 = constrain(v3, -maxPWM, maxPWM);
+  v4 = constrain(v4, -maxPWM, maxPWM);
 
   setMotor(1, v1);
   setMotor(2, v2);
   setMotor(3, v3);
   setMotor(4, v4);
 
+  if(PS4.Left()){
+    digitalWrite(frontLeft1, LOW);
+    digitalWrite(frontLeft2, HIGH);
+    ledcWrite(pwmChannel0, 225);
+
+    digitalWrite(frontRight1, LOW); 
+    digitalWrite(frontRight2, HIGH);
+    ledcWrite(pwmChannel1, 225);
+
+    digitalWrite(backLeft1, LOW);
+    digitalWrite(backLeft2, HIGH);
+    ledcWrite(pwmChannel2, 225);
+
+    digitalWrite(backRight1, LOW);
+    digitalWrite(backRight2, HIGH);
+    ledcWrite(pwmChannel3, 225); 
+  }
+
+  if(PS4.Right()){
+    digitalWrite(frontLeft1, HIGH);
+    digitalWrite(frontLeft2, LOW);
+    ledcWrite(pwmChannel0, 225);
+
+    digitalWrite(frontRight1, HIGH); 
+    digitalWrite(frontRight2, LOW);
+    ledcWrite(pwmChannel1, 225);
+
+    digitalWrite(backLeft1, HIGH);
+    digitalWrite(backLeft2, LOW);
+    ledcWrite(pwmChannel2, 225);
+
+    digitalWrite(backRight1, HIGH);
+    digitalWrite(backRight2, LOW);
+    ledcWrite(pwmChannel3, 225); 
+  }
+
   Serial.print("v1 : "); Serial.println(v1);
   Serial.print("v2 : "); Serial.println(v2);
   Serial.print("v3 : "); Serial.println(v3);
   Serial.print("v4 : "); Serial.println(v4);
-
-
-    // if (PS4.R1()) servoPos += 2;
-    // if (PS4.R2()) servoPos -= 2;
-
-    // servoPos = constrain(servoPos, 0, 180);
-    // gripServo.write(servoPos);
-    // delay(15); // biar gerak halus
 
   static unsigned long lastServoTime = 0;
   const unsigned long servoInterval = 100;
@@ -141,22 +138,32 @@ v4 = constrain(v4, -255, 255);
     servoInitialized = true;
   }
   
-  if(millis() - lastServoTime >= servoInterval){
+  // if(millis() - lastServoTime >= servoInterval){
 
-    bool up= PS4.Up();
-    bool down= PS4.Down();
+  //   bool up= PS4.L1();
+  //   bool down= PS4.L2();
 
-    if( up && !down && servoPos < 180){
-      servoPos +=5;
-    }
+  //   if( up && !down && servoPos < 180){
+  //     servoPos +=5;
+  //   }
 
-    if(down && !up && servoPos > 0){
-      servoPos -=5;
-    }
-    gripServo.write(servoPos);
-    lastServoTime = millis();
+  //   if(down && !up && servoPos > 0){
+  //     servoPos -=5;
+  //   }
+  //   gripServo.write(servoPos);
+  //   lastServoTime = millis();
 
+  // }
+
+
+  if(PS4.L1()){
+    gripServo.write(50);
+  } 
+  if(PS4.L2()){
+    gripServo.write(0);
   }
+  
+
 
   
   Serial.print("Grip : "); Serial.println(servoPos);
@@ -167,11 +174,11 @@ v4 = constrain(v4, -255, 255);
     digitalWrite(lifter2, LOW);
     ledcWrite(pwmChannel4, 100);
   } 
-  else if (PS4.Triangle()) {
+  else if (PS4.R2()) {
     // L2 ditekan → lifter turun
     digitalWrite(lifter1, LOW);
     digitalWrite(lifter2, HIGH);
-    ledcWrite(pwmChannel4, 100);
+    ledcWrite(pwmChannel4, 90);
   } 
   else {
     // Tidak ditekan → lifter berhenti
